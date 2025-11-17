@@ -1,0 +1,19 @@
+# Python venv
+venv/
+env/
+
+# Playwright browsers
+**/ms-playwright/
+.playwright/
+
+# Python cache
+__pycache__/
+*.pyc
+pytest_cache/
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
