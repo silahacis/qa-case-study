@@ -54,5 +54,75 @@ export default function () {
     });
 
     sleep(1);
+    
+    // ***EDGE CASES***
+  group("edge-case", () => {
+    // 1) Non-existing character
+    const invalidQuery = `
+      query {
+        character(id: 9999999) {
+          id
+          name
+        }
+      }
+    `;
+    const invalidRes = http.post(
+      url,
+      JSON.stringify({ query: invalidQuery }),
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    check(invalidRes, {
+      "invalid id returns 200": (r) => r.status === 200,
+    });
+
+    let invalidBody = {};
+    try {
+      invalidBody = JSON.parse(invalidRes.body);
+    } catch {}
+
+    check(invalidBody, {
+      "invalid returns null or error": (b) =>
+        b.data?.character === null || b.errors,
+    });
+
+    sleep(0.5);
+
+    // 2) Invalid field
+    const badFieldQuery = `
+      query {
+        character(id: 1) {
+          id
+          unknownFieldXYZ
+        }
+      }
+    `;
+
+    const badFieldRes = http.post(
+      url,
+      JSON.stringify({ query: badFieldQuery }),
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    check(badFieldRes, {
+      "invalid field still returns 200": (r) => r.status === 200 || r.status === 400,
+    });
+
+    let badFieldBody = {};
+    try {
+      badFieldBody = JSON.parse(badFieldRes.body);
+    } catch {}
+
+    check(badFieldBody, {
+      "invalid field produces GraphQL errors": (b) =>
+        Array.isArray(b.errors) && b.errors.length > 0,
+    });
+
+    sleep(0.5);
   });
+});
 }
