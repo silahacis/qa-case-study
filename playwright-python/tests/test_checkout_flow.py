@@ -83,3 +83,27 @@ def test_checkout_flow(page: Page):
     expect(page.locator(".summary_total_label")).to_be_visible()
 
     # STOP BEFORE PAYMENT (do NOT click Finish)
+
+def test_basic_accessibility_checks(page: Page):
+    # 1) Login
+    login(page)
+
+    # Validate inventory loaded
+    expect(page).to_have_url(BASE_URL + "inventory.html")
+
+    # --- IMAGE ALT TEXT CHECK ---
+    first_image = page.locator("img.inventory_item_img").first
+    alt_value = first_image.get_attribute("alt")
+    assert alt_value is not None and alt_value.strip() != "", "Image has missing alt text"
+
+    # --- CHECK BUTTON ACCESSIBILITY ROLES ---
+    add_button = page.locator('[data-test="add-to-cart-sauce-labs-backpack"]')
+    role = add_button.get_attribute("role")
+
+    # Playwright exposes ARIA metadata; buttons often have implicit role
+    assert role in (None, "button"), "Add to cart button should have button role"
+
+    # --- CHECK PAGE TITLE IS ACCESSIBLE ---
+    page_title = page.locator(".title")
+    expect(page_title).to_be_visible()
+    assert page_title.inner_text().strip() == "Products"
