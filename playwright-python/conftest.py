@@ -1,5 +1,11 @@
+import os
 import pytest
 from playwright.sync_api import sync_playwright
+
+# Ensure screenshots directory exists
+SCREENSHOT_DIR = "screenshots"
+os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+
 
 @pytest.fixture(scope="session")
 def playwright_instance():
@@ -20,8 +26,13 @@ def page(browser, request):
     yield page
 
     # If test fails → take screenshot (flake resistance)
-    if request.node.rep_call.failed:
-        page.screenshot(path=f"screenshot_{request.node.name}.png")
+    if hasattr(request.node, "rep_call") and request.node.rep_call.failed:
+        file_path = os.path.join(
+            SCREENSHOT_DIR,
+            f"{request.node.name}.png"
+        )
+        page.screenshot(path=file_path)
+        print(f"\n📸 Screenshot saved: {file_path}")
 
     context.close()
 
