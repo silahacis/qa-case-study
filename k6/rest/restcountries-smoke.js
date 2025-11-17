@@ -1,13 +1,23 @@
 import http from "k6/http";
 import { check, sleep, group } from "k6";
 
+// Thresholds: Applied ONLY on "happy" group
 export const options = {
   vus: 1,
   iterations: 1,
+
+  thresholds: {
+    // Response time SLA for happy-path requests
+    "http_req_duration{group:happy}": ["p(95)<600"],
+
+    // Error rate SLA for happy-path only
+    "http_req_failed{group:happy}": ["rate<0.01"],
+  },
 };
 
 export default function () {
-  group("RESTCountries", () => {
+  //  HAPPY PATH (with group tagging)
+  group("happy", () => {
     const url = "https://restcountries.com/v3.1/name/turkey";
 
     const res = http.get(url);
@@ -47,9 +57,10 @@ export default function () {
     });
 
     sleep(1);
+  });
 
     // ***EDGE CASES***
-
+  group("edge-case", () => {
     // 1) Non-existing country
     const invalid = http.get(
       "https://restcountries.com/v3.1/name/thisCountryDoesNotExist123456"
@@ -97,11 +108,11 @@ export default function () {
     // 4) Special characters
     const specialInput = encodeURIComponent("%$#@!");
     const special = http.get(
-    `https://restcountries.com/v3.1/name/${specialInput}`
+      `https://restcountries.com/v3.1/name/${specialInput}`
     );
 
     check(special, {
-    "special chars do not crash API": (r) =>
+      "special chars do not crash API": (r) =>
         r.status === 404 || r.status === 200,
     });
 
@@ -113,6 +124,5 @@ export default function () {
       "empty query returns valid status (400|404|200)": (r) =>
         r.status === 400 || r.status === 404 || r.status === 200,
     });
-    sleep(0.5);
   });
 }
