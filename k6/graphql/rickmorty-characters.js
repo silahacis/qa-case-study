@@ -61,7 +61,8 @@ export default function () {
     });
 
     sleep(1);
-    
+});
+
     // ***EDGE CASES***
   group("edge-case", () => {
     // 1) Non-existing character
@@ -131,5 +132,4 @@ export default function () {
 
     sleep(0.5);
   });
-});
 }
