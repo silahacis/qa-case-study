@@ -36,3 +36,50 @@ def test_inventory_listing_and_product_detail(page: Page):
 
     # Optional: back button visible
     expect(page.locator('[data-test="back-to-products"]')).to_be_visible()
+
+def test_checkout_flow(page: Page):
+    # 1) Login
+    login(page)
+
+    # Ensure inventory page is loaded
+    expect(page).to_have_url(BASE_URL + "inventory.html")
+    expect(page.locator(".title")).to_have_text("Products")
+
+    # 2) Add first product to cart
+    first_item_add_button = page.locator('[data-test="add-to-cart-sauce-labs-backpack"]')
+    first_item_add_button.click()
+
+    # Verify cart badge shows 1 item
+    cart_badge = page.locator(".shopping_cart_badge")
+    expect(cart_badge).to_have_text("1")
+
+    # 3) Go to cart
+    page.locator(".shopping_cart_link").click()
+    expect(page.locator(".title")).to_have_text("Your Cart")
+
+    # Validate item exists in cart
+    cart_item = page.locator(".cart_item")
+    expect(cart_item).to_have_count(1)
+
+    # 4) Begin checkout
+    page.locator('[data-test="checkout"]').click()
+    expect(page.locator(".title")).to_have_text("Checkout: Your Information")
+
+    # 5) Fill checkout info
+    page.locator('[data-test="firstName"]').fill("Sila")
+    page.locator('[data-test="lastName"]').fill("Hacialioglu")
+    page.locator('[data-test="postalCode"]').fill("07000")
+
+    page.locator('[data-test="continue"]').click()
+
+    # 6) Validate checkout overview page
+    expect(page.locator(".title")).to_have_text("Checkout: Overview")
+
+    # Item summary visible
+    expect(page.locator(".cart_item")).to_have_count(1)
+
+    # Price summary
+    expect(page.locator(".summary_subtotal_label")).to_be_visible()
+    expect(page.locator(".summary_total_label")).to_be_visible()
+
+    # STOP BEFORE PAYMENT (do NOT click Finish)
