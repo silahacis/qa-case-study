@@ -2,8 +2,15 @@ import http from "k6/http";
 import { check, sleep, group } from "k6";
 
 export const options = {
-  vus: 1,
-  iterations: 1,
+  stages: [
+    { duration: "5s", target: 1 },  // smoke
+    { duration: "10s", target: 3 }, // light load
+    { duration: "5s", target: 0 },  // ramp down
+  ],
+  thresholds: {
+    "http_req_duration{group:happy}": ["p(95)<800"],
+    "http_req_failed{group:happy}": ["rate<0.01"],
+  },
 };
 
 const url = "https://rickandmortyapi.com/graphql";
@@ -109,7 +116,7 @@ export default function () {
     );
 
     check(badFieldRes, {
-      "invalid field still returns 200": (r) => r.status === 200 || r.status === 400,
+      "invalid field returns 200 or 400": (r) => r.status === 200 || r.status === 400,
     });
 
     let badFieldBody = {};
