@@ -1,10 +1,13 @@
 import http from "k6/http";
 import { check, sleep, group } from "k6";
 
-// Thresholds: Applied ONLY on "happy" group
+// Thresholds + Stages configuration
 export const options = {
-  vus: 1,
-  iterations: 1,
+    stages: [
+    { duration: "5s", target: 1 },   // SMOKE
+    { duration: "10s", target: 3 },  // LIGHT LOAD
+    { duration: "5s", target: 0 },   // RAMP DOWN
+    ],
 
   thresholds: {
     // Response time SLA for happy-path requests
