@@ -25,12 +25,12 @@ jobs:
       - name: Run REST Countries Tests
         working-directory: k6/rest
         run: |
-          k6 run restcountries_full.js --out json=rest_output.json
+          k6 run restcountries-smoke.js --out json=rest_output.json
 
       - name: Run GraphQL Tests
         working-directory: k6/graphql
         run: |
-          k6 run rickmorty_full.js --out json=graphql_output.json
+          k6 run rickmorty-characters.js --out json=graphql_output.json
 
       - name: Upload K6 Results
         uses: actions/upload-artifact@v4
