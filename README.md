@@ -71,8 +71,6 @@ K6 is used to test two public APIs:
 - Invalid field → schema error  
 - GraphQL `errors[]` validation  
 
-All tests follow the case study guideline:
-
 ---
 
 ## 📊 Performance Thresholds (SLAs)
