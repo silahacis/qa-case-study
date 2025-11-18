@@ -1,162 +1,236 @@
 # QA Engineer Case Study – Public APIs x K6 + Playwright
 
-This project demonstrates structured QA automation practices across both API and UI layers,  
-leveraging industry-standard tools like **K6** and **Playwright**.
+This repository demonstrates a complete QA automation setup across **API** and **UI** layers,  
+using two widely adopted tools:
 
-It was built as part of a hands-on QA-focused assignment,  
-aimed at validating real-world testing capabilities involving:
+- **K6 (JavaScript)** → REST + GraphQL API integration tests  
+- **Playwright (Python)** → Browser-based E2E tests  
+- **GitHub Actions CI** → Automated runs on every pull request  
 
-- REST and GraphQL API integration testing
-- End-to-end browser automation
-- Basic performance profiling and CI integration
-
-The goal is to showcase maintainable, scalable, and stable testing strategies suitable for modern QA workflows.
+The goal is to show real-world QA practices:  
+clear test design, meaningful assertions, stable execution, and CI readiness.
 
 ---
 
-## 📌 Project Deliverables
+# 📁 Project Deliverables
 
-This repository contains:
+- **K6 integration tests**  
+  - REST + GraphQL  
+  - Happy path, edge cases, performance thresholds, basic load profile  
 
-- **K6 (JS)** integration test scripts for REST + GraphQL  
-- **Playwright (Python)** E2E tests and fixtures  
-- **GitHub Actions** workflows that run tests on each `pull_request`  
-- A clear **README** explaining setup, test strategy, and coverage  
+- **Playwright (Python) E2E tests**  
+  - Login, inventory, product detail, add-to-cart, checkout (pre-payment)  
+  - Screenshots on failure  
 
----
+- **GitHub Actions Workflows**  
+  - Separate pipelines for K6 & Playwright  
 
-# 🔵 K6 Integration Tests
-
-K6 is used for **API-level integration testing** to validate functionality, schema correctness,  
-edge-case handling, and basic performance characteristics.
-
-We tested **two public APIs** (one REST, one GraphQL), as required by the case study:
-
-- **REST API:** RestCountries v3  
-- **GraphQL API:** Rick & Morty GraphQL  
+- **Local runner script**  
+  - `bash scripts/run_local.sh` → Runs ALL tests with one command  
 
 ---
 
-## ✅ What We Verify in K6 Tests
+# 🔵 K6 Integration Tests (REST + GraphQL)
 
-### ✔ Functional & Happy Path
-- 200 OK responses  
-- Valid JSON structure  
-- Required fields exist  
-- Functional correctness  
-  - **REST:** Country official name = `"Republic of Turkey"`  
-  - **GraphQL:** Character name = `"Rick Sanchez"`  
+K6 is used to test two public APIs:
 
-### ✔ Schema & Shape Validation
-- Array validations (`capital`, etc.)
-- Object field existence (`region`, `origin.name`)
-- GraphQL `errors[]` validation
+| Type     | Endpoint |
+|----------|----------|
+| REST     | https://restcountries.com |
+| GraphQL  | https://rickandmortyapi.com/graphql |
 
-### ✔ Functional & Happy Path
-- 200 OK responses  
-- JSON structure validation  
-- Required fields exist  
-- Functional correctness  
-  - REST → Country name = *“Republic of Turkey”*
-  - GraphQL → Character name = *“Rick Sanchez”*
+## ✔ Functional (Happy Path)
 
-### ✔ Schema & Shape Validation
-- Field existence (`name`, `capital`, `region`, `origin.name`, etc.)
-- Array validations
-- GraphQL `errors[]` handling
+### RESTCountries
+- `200 OK`  
+- Valid JSON  
+- Required fields exist (`name.official`, `capital[]`, `region`)  
+- Business check: **official name must be “Republic of Turkey”**  
 
-### ✔ Edge Cases
+### Rick & Morty GraphQL
+- `200 OK`  
+- Valid JSON  
+- `data.character.id === "1"`  
+- Character name: **“Rick Sanchez”**  
+- `origin.name` exists  
+- No GraphQL errors for valid queries  
 
-#### REST:
-- Invalid country  
-- Partial match  
+---
+
+## ⚠ Edge Case Coverage
+
+### REST
+- Invalid country name  
+- Partial search (`"tur"`)  
 - Numeric input  
 - Special characters  
 - Empty query (`/name/`)  
 
-#### GraphQL:
-- Invalid character ID  
-- Invalid fields (schema errors)  
-- Requests returning GraphQL-level errors  
+### GraphQL
+- Invalid character ID → `null` or `errors[]`  
+- Invalid field → schema error  
+- GraphQL `errors[]` validation  
 
-### ✔ Performance Signals (Thresholds)
-
-Thresholds applied **only to happy-path groups**:
-
-| API      | Threshold         |
-|----------|-------------------|
-| REST     | **p95 < 600ms**   |
-| GraphQL  | **p95 < 800ms**   |
-
-**Why different?**  
-GraphQL public endpoints tend to respond slower because:
-- They resolve nested data  
-- Have heavier resolver chains  
-- Are globally rate-limited  
-
-Therefore, REST gets a stricter threshold, while GraphQL stays conservative.
-
-### ✔ Load Profile
-Basic load (per assignment requirement):
-- 5s → 1 VU (smoke)
-- 10s → 3 VUs (light load)
-- 5s → ramp down
-
+All tests follow the case study guideline:
 
 ---
 
-## 🧩 Why Conservative Thresholds?  
-(Performance Strategy Explanation)
+## 📊 Performance Thresholds (SLAs)
 
-The assignment explicitly requires:
+Thresholds are applied **only to happy-path requests**.
 
-> “Start conservative and explain how you’d tune thresholds over time.”
+| API | SLA |
+|-----|-----|
+| REST | **p95 < 600ms** |
+| GraphQL | **p95 < 800ms** |
 
-Our approach:
+### Why different values?
+- REST is simple JSON → naturally faster  
+- GraphQL has resolvers, nested fields → slower by design  
 
-1. **Start with high limits** (600–800ms)  
-   → Prevent flaky failures due to network jitter.
-
-2. **Collect real metrics over CI runs**  
-   → Observe p95 trends daily or weekly.
-
-3. **Gradually tighten limits**  
-   Example progression:
-   - REST p95: 600 → 500 → 400ms  
-   - GraphQL p95: 800 → 700 → 600ms  
-
-4. **Lock final thresholds once stable**  
-   → Ensures tests are meaningful but reliable.
+### Why p95?
+- Industry standard percentile  
+- More stable than max/avg  
+- Less sensitive to network spikes  
 
 ---
 
-## 🛡 Flakiness Controls Used
+## 🧩 Threshold Tuning Strategy  
 
-To ensure stable, CI-friendly tests:
+- Start conservative (600–800ms)  
+- Collect CI data  
+- Gradually tighten  
+  - REST: 600 → 500 → 400  
+  - GraphQL: 800 → 700 → 600  
+- Freeze SLAs once stable  
 
-- Thresholds apply **only** to happy-path groups  
+---
+
+## 🛡 Flakiness Controls
+
+- Thresholds apply to `group:happy` only  
 - JSON parsing wrapped in `try/catch`  
-- Invalid scenarios do **not** trigger SLA failures  
-- Low VU count (public APIs)  
-- No reliance on server-side state  
-- Deterministic grouping for stable metrics  
+- Edge cases do not break SLAs  
+- Low VU load to avoid rate limits  
+- No external state dependency  
 
 ---
 
-## ▶️ Running K6 Tests
+# 🟣 Playwright E2E Tests (Python)
 
-Install k6:  
-https://k6.io/docs/get-started/installation/
+UI tests are implemented using **SauceDemo**, a common app for QA exercises.
 
-```bash
-Run REST tests:
-k6 run k6/rest/restcountries_smoke.js
+## ✔ Covered Scenarios
 
-Run GraphQL tests:
-k6 run k6/graphql/rickmorty_smoke.js
+### Login Tests
+- Successful login  
+- Locked-out user  
+- Invalid credentials  
+
+### Inventory Page
+- Validate product listing  
+- Open product details  
+
+### Add to Cart
+- Add first product  
+- Cart badge update  
+- Item appears on cart page  
+
+### Checkout (Pre-payment)
+- Fill user information  
+- Validate summary page  
+- Confirm item & prices  
+
+### Stability
+- Screenshots saved **only on failure**  
+- Auto-wait built into Playwright (no sleeps)  
+- Deterministic selectors (`data-test=` attributes)  
+
+---
+
+# ▶️ Running Tests Locally
+
+This project includes a **local runner script**:
+
+```
+bash scripts/run_local.sh
 ```
 
-## 🟣 E2E Tests (Playwright – Python)
+This script runs:
 
-Playwright (Python) is used to implement **end-to-end (E2E) tests**, validating UI and user flows in a clean, maintainable, and deterministic way.  
-The goal is to demonstrate structure, fixture usage, and stable automation practices as required by the case study.
+- K6 REST tests  
+- K6 GraphQL tests  
+- Playwright E2E tests  
+
+BUT:  
+Playwright lives inside a **virtual environment**,  
+so you must **activate venv first**, or pytest won’t be found.
+
+---
+
+## 🔧 1) First-Time Setup
+
+```bash
+cd playwright-python
+python -m venv venv
+source venv/Scripts/activate   # Windows (Git Bash/WSL)
+pip install -r requirements.txt
+playwright install --with-deps
+cd ..
+```
+
+> ⚠ Windows PowerShell does **not** support `source`.  
+> Use **Git Bash**, **WSL**, or CMD.
+
+---
+
+## ▶️ 2) Run All Tests with One Command
+
+From project root:
+
+```bash
+# activate virtual environment
+cd playwright-python
+source venv/Scripts/activate
+cd ..
+
+# run all tests
+bash scripts/run_local.sh
+```
+
+### The script will:
+✔ Run K6 REST tests  
+✔ Run K6 GraphQL tests  
+✔ Run Playwright tests in your active venv  
+✔ Save screenshots on failures  
+✔ Generate JSON outputs  
+
+---
+
+# 🤖 GitHub Actions (CI)
+
+CI pipelines run automatically on every pull request:
+
+```
+.github/workflows/
+│── k6-integration.yml
+└── playwright-e2e.yml
+```
+
+Artifacts uploaded:
+
+- K6 JSON results  
+- Playwright screenshots (on failure)  
+
+---
+
+# 🎉 Summary
+
+This case study demonstrates:
+
+- Strong separation of API + UI testing  
+- Clean K6 test design (happy path, edge cases, thresholds, load)  
+- Stable Playwright E2E structure  
+- Full CI automation  
+- Local runner for convenience  
+- Conservative + explainable performance decisions
