@@ -1,0 +1,41 @@
+name: K6 Integration Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  k6-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg ca-certificates
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run REST Countries Tests
+        working-directory: k6/rest
+        run: |
+          k6 run restcountries_full.js --out json=rest_output.json
+
+      - name: Run GraphQL Tests
+        working-directory: k6/graphql
+        run: |
+          k6 run rickmorty_full.js --out json=graphql_output.json
+
+      - name: Upload K6 Results
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-results
+          path: |
+            k6/rest/rest_output.json
+            k6/graphql/graphql_output.json
